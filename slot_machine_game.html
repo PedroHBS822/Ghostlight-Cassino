@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caça Níquel Moderno</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Seus pontos: <span id="points">0</span></h2>
+
+  <div class="slot-machine">
+    <div class="reel" id="reel1">
+      <div class="symbol top">🕯️</div>
+      <div class="symbol middle">🪦</div>
+      <div class="symbol bottom">👻</div>
+    </div>
+    <div class="reel" id="reel2">
+      <div class="symbol top">🎃</div>
+      <div class="symbol middle">🕯️</div>
+      <div class="symbol bottom">🪦</div>
+    </div>
+    <div class="reel" id="reel3">
+      <div class="symbol top">✨</div>
+      <div class="symbol middle">👻</div>
+      <div class="symbol bottom">🎃</div>
+    </div>
+  </div>
+
+  <button onclick="startSpin()">GIRAR</button>
+  <button onclick="exchangePoints()">TROCAR PONTOS</button>
+
+
+  <div id="score-popup" class="hidden">
+    <br><br><br>
+    <p id="score-message"></p>
+    <br><br>
+    <button id="close-popup">CONTINUAR</button>
+  </div>
+
+  <div id="jackpot-popup" class="hidden">
+    <h1>INVOCOU O GHOSTLIGHT!</h1>
+    <h3>Você liberou o espírito supremo</h2>
+    <p>500 pontos!</p>
+    <button id="close-jackpot">CONTINUAR</button>
+  </div>
+
+  <div id="exchange-popup" class="hidden">
+    <h3>🎁 Troque seus pontos Ghostlight Cassino</h3>
+    <ul>
+      <li><button id="exchange1" class="disabled" disabled>Ticket para bebida</button></li>
+      <li><button id="exchange2" class="disabled" disabled>Voucher 100 reais</button></li>
+      <li><button id="exchange3" class="disabled" disabled>Prato no restaurante</button></li>
+      <li><button id="exchange4" class="disabled" disabled>Ingresso para show</button></li>
+      <li><button id="exchange5" class="disabled" disabled> Hospedagem 2 noites + todos os prêmios</button></li>
+    </ul>
+    <button id="close-exchange">Fechar</button>
+  </div>
+
+  
+  <audio id="ghost-sound" src="ghost-sound.mp3" preload="auto"></audio>
+  <audio id="spin-sound" src="spin-sound.mp3" preload="auto"></audio>
+  <script>
+    const symbols = ["🕯️", "✨", "🎃", "🪦", "👻"]; // ordem do menor para maior
+    // const symbols = ["👻", "👻", "👻", "👻", "👻"]; // ordem do menor para maior
+        // const symbols = ["👻", "👻", "👻", "👻", "🪦"]; // ordem do menor para maior
+    let points = 0;
+    let spinning = false;
+
+    function startSpin() {
+    if (spinning) return;
+    spinning = true;
+
+    // Tocar som da roleta
+    const spinSound = document.getElementById("spin-sound");
+    spinSound.currentTime = 0;
+    spinSound.volume = 0.5;
+    spinSound.play();
+
+    spin();
+  }
+
+  function spin() {
+    const reels = [
+      document.getElementById("reel1"),
+      document.getElementById("reel2"),
+      document.getElementById("reel3")
+    ];
+
+    let results = [];
+    let intervals = [];
+
+    reels.forEach((reel, index) => {
+      const top = reel.querySelector(".top");
+      const middle = reel.querySelector(".middle");
+      const bottom = reel.querySelector(".bottom");
+
+      intervals[index] = setInterval(() => {
+        let midIndex = Math.floor(Math.random() * symbols.length);
+        let topIndex = (midIndex - 1 + symbols.length) % symbols.length;
+        let bottomIndex = (midIndex + 1) % symbols.length;
+
+        top.textContent = symbols[topIndex];
+        middle.textContent = symbols[midIndex];
+        bottom.textContent = symbols[bottomIndex];
+      }, 1);
+    });
+
+    reels.forEach((reel, index) => {
+      setTimeout(() => {
+        clearInterval(intervals[index]);
+
+        const top = reel.querySelector(".top");
+        const middle = reel.querySelector(".middle");
+        const bottom = reel.querySelector(".bottom");
+
+        let midIndex = Math.floor(Math.random() * symbols.length);
+        let topIndex = (midIndex - 1 + symbols.length) % symbols.length;
+        let bottomIndex = (midIndex + 1) % symbols.length;
+
+        top.textContent = symbols[topIndex];
+        middle.textContent = symbols[midIndex];
+        bottom.textContent = symbols[bottomIndex];
+
+        results[index] = symbols[midIndex];
+
+        if (index === reels.length - 1) {
+        setTimeout(() => {
+          // Calcular pontos e mostrar pop-up
+          calculatePoints(results);
+
+          spinning = false;
+
+          // Agora parar o som da roleta, só depois do pop-up aparecer
+          spinSound.pause();
+          spinSound.currentTime = 0;
+
+        }, 300);
+      }
+      }, 1500 + index * 1100);
+    });
+  }
+
+  // Função de cálculo de pontos (incluindo jackpot)
+  function calculatePoints(results) {
+    const [s1, s2, s3] = results;
+    const popup = document.getElementById("score-popup");
+    const message = document.getElementById("score-message");
+    const jackpotPopup = document.getElementById("jackpot-popup");
+    const ghostSound = document.getElementById("ghost-sound");
+
+    const scoreTable = {
+      "🕯️": 10,
+      "✨": 20,
+      "🎃": 40,
+      "🪦": 100,
+      "👻": 500
+    };
+
+    if (s1 === s2 && s2 === s3) {
+      const pointsWon = scoreTable[s1] || 0;
+      points += pointsWon;
+
+      if (s1 === "👻") {
+        // Jackpot especial
+        ghostSound.currentTime = 0;
+        ghostSound.volume = 0.5;
+        ghostSound.play();
+
+        jackpotPopup.classList.remove("hidden");
+        jackpotPopup.classList.add("show");
+
+      } else {
+        let ghostMessage = "";
+        switch(s1) {
+          case "🕯️": ghostMessage = "Vela maldita! 10 pontos etéreos!"; break;
+          case "✨": ghostMessage = "Faísca espectral! 20 pontos sombrios!"; break;
+          case "🎃": ghostMessage = "Abóbora assombrada! 40 pontos fantasmagóricos!"; break;
+          case "🪦": ghostMessage = "Túmulo fantasmático! 100 pontos de arrepiar!"; break;
+        }
+        message.textContent = ghostMessage;
+        setTimeout(() => {
+          popup.classList.remove("hidden");
+          popup.classList.add("show");
+        }, 500);
+      }
+
+    } else if (s1 === s2 || s2 === s3 || s1 === s3) {
+      points += 5;
+      message.textContent = "Dois espectros colidem… 5 pontos de pura treva!";
+      setTimeout(() => {
+        popup.classList.remove("hidden");
+        popup.classList.add("show");
+      }, 500);
+
+    } else {
+      message.textContent = "Nenhum espírito foi invocado, a escuridão segue ao seu lado";
+      setTimeout(() => {
+        popup.classList.remove("hidden");
+        popup.classList.add("show");
+      }, 500);
+    }
+
+    document.getElementById("points").textContent = points;
+  }
+
+  // Fechar popup normal
+  document.getElementById("close-popup").addEventListener("click", () => {
+    const popup = document.getElementById("score-popup");
+    popup.classList.remove("show");
+    popup.classList.add("hidden");
+  });
+
+  // Fechar jackpot popup
+  document.getElementById("close-jackpot").addEventListener("click", () => {
+    const jackpotPopup = document.getElementById("jackpot-popup");
+    jackpotPopup.classList.remove("show");
+    jackpotPopup.classList.add("hidden");
+
+    const ghostSound = document.getElementById("ghost-sound");
+    ghostSound.pause();
+    ghostSound.currentTime = 0;
+  });
+
+  function exchangePoints() {
+  const exchangeDiv = document.getElementById("exchange-popup");
+  exchangeDiv.style.display = "block";
+
+  const exchanges = [
+    { id: "exchange1", points: 100 },
+    { id: "exchange2", points: 200 },
+    { id: "exchange3", points: 300 },
+    { id: "exchange4", points: 400 },
+    { id: "exchange5", points: 500 }
+  ];
+
+  exchanges.forEach(exchange => {
+    const btn = document.getElementById(exchange.id);
+    if (points >= exchange.points) {
+      btn.disabled = false;
+      btn.classList.remove("disabled");
+    } else {
+      btn.disabled = true;
+      btn.classList.add("disabled");
+    }
+  });
+}
+
+// Fechar popup
+document.getElementById("close-exchange").addEventListener("click", () => {
+  document.getElementById("exchange-popup").style.display = "none";
+});
+
+// Adicionar ações aos botões
+const exchangeActions = [
+  { id: "exchange1", cost: 100, message: "🎉 Você resgatou seu ticket para uma bebida! 🍹" },
+  { id: "exchange2", cost: 200, message: "💰 Você resgatou um voucher de 100 reais para apostas!" },
+  { id: "exchange3", cost: 300, message: "🍽️ Você resgatou um prato no restaurante do cassino!" },
+  { id: "exchange4", cost: 400, message: "🎤 Você resgatou um ingresso para o show do cassino!" },
+  { id: "exchange5", cost: 500, message: "🏨 Você ganhou a hospedagem de 2 noites + todos os prêmios anteriores!" }
+];
+
+exchangeActions.forEach(action => {
+  document.getElementById(action.id).addEventListener("click", () => {
+    alert(action.message);
+    points -= action.cost;
+    document.getElementById("points").textContent = points;
+    exchangePoints(); // Atualiza quais botões estão liberados
+  });
+});
+
+
+
+  </script>
+</body>
+</html>
