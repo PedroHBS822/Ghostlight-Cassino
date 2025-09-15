@@ -6,8 +6,31 @@
   <title>Caça Níquel Moderno</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body> 
+  <div id="rules-popup" class="show">
+    <p>Regras do Jogo</p>
+    <ul>
+      <li>✨ 2 símbolos iguais = <strong>+5 pontos</strong></li>
+      <li>🕯️ 3 velas = <strong>+10 pontos</strong></li>
+      <li>✨ 3 faíscas = <strong>+20 pontos</strong></li>
+      <li>🎃 3 abóboras = <strong>+40 pontos</strong></li>
+      <li>🪦 3 túmulos = <strong>+100 pontos</strong></li>
+      <li>👻 3 fantasmas = <strong>+500 pontos (Jackpot!)</strong></li>
+    </ul>
+  
+    <p>Prêmios disponíveis</p>
+    <ul>
+      <li>100 pontos → 🍹 Ticket para bebida</li>
+      <li>200 pontos → 💰 Voucher de 100 reais</li>
+      <li>300 pontos → 🍽️ Prato no restaurante</li>
+      <li>400 pontos → 🎤 Ingresso para show</li>
+      <li>500 pontos → 🏨 Hospedagem 2 noites <br> + todos os prêmios</li>
+    </ul>
+  
+    <button id="close-rules">Começar a Jogar</button>
+  </div>
   <h2>Seus pontos: <span id="points">0</span></h2>
+  <h3 id="tentativa">Tentativas restantes: <span id="attempts">10</span></h3>
 
   <div class="slot-machine">
     <div class="reel" id="reel1">
@@ -46,7 +69,7 @@
   </div>
 
   <div id="exchange-popup" class="hidden">
-    <h3>🎁 Troque seus pontos Ghostlight Cassino</h3>
+    <h3>Troque seus pontos <br> Ghostlight Cassino</h3>
     <ul>
       <li><button id="exchange1" class="disabled" disabled>Ticket para bebida</button></li>
       <li><button id="exchange2" class="disabled" disabled>Voucher 100 reais</button></li>
@@ -57,28 +80,51 @@
     <button id="close-exchange">Fechar</button>
   </div>
 
+  <div id="lose-popup" class="hidden">
+    <p>💀 <br> Sua sorte se apagou nas sombras...  <br>
+    10 tentativas, menos de 100 pontos. <br>  
+    O além riu de você!</p>
+    <button id="close-lose">Tentar Novamente</button>
+  </div>
+
   
   <audio id="ghost-sound" src="ghost-sound.mp3" preload="auto"></audio>
   <audio id="spin-sound" src="spin-sound.mp3" preload="auto"></audio>
   <script>
     const symbols = ["🕯️", "✨", "🎃", "🪦", "👻"]; // ordem do menor para maior
     // const symbols = ["👻", "👻", "👻", "👻", "👻"]; // ordem do menor para maior
-        // const symbols = ["👻", "👻", "👻", "👻", "🪦"]; // ordem do menor para maior
+        // const symbols = ["👻", "👻", "🪦", "🪦", "🪦"]; // ordem do menor para maior
     let points = 0;
+    let attempts = 0; // contador de tentativas
+    const maxAttempts = 10;
     let spinning = false;
+    let gameOver = false;
 
+    function updateUI() {
+  document.getElementById("points").textContent = points;
+  document.getElementById("attempts").textContent = maxAttempts - attempts;
+}
     function startSpin() {
-    if (spinning) return;
-    spinning = true;
+  if (spinning) return;
 
-    // Tocar som da roleta
-    const spinSound = document.getElementById("spin-sound");
-    spinSound.currentTime = 0;
-    spinSound.volume = 0.5;
-    spinSound.play();
-
-    spin();
+  // Checa se já terminou as 10 tentativas
+  if (attempts >= 10) {
+    checkFinalResult();
+    return;
   }
+
+  attempts++;
+  updateUI();
+  spinning = true;
+
+  // Tocar som da roleta
+  const spinSound = document.getElementById("spin-sound");
+  spinSound.currentTime = 0;
+  spinSound.volume = 0.5;
+  spinSound.play();
+
+  spin();
+}
 
   function spin() {
     const reels = [
@@ -158,50 +204,61 @@
     };
 
     if (s1 === s2 && s2 === s3) {
-      const pointsWon = scoreTable[s1] || 0;
-      points += pointsWon;
+  // Três iguais → calcula pontos e mostra popup
+  const pointsWon = scoreTable[s1] || 0;
+  points += pointsWon;
 
-      if (s1 === "👻") {
-        // Jackpot especial
-        ghostSound.currentTime = 0;
-        ghostSound.volume = 0.5;
-        ghostSound.play();
+  if (s1 === "👻") {
+    // Jackpot especial
+    ghostSound.currentTime = 0;
+    ghostSound.volume = 0.5;
+    ghostSound.play();
 
-        jackpotPopup.classList.remove("hidden");
-        jackpotPopup.classList.add("show");
+    jackpotPopup.classList.remove("hidden");
+    jackpotPopup.classList.add("show");
 
-      } else {
-        let ghostMessage = "";
-        switch(s1) {
-          case "🕯️": ghostMessage = "Vela maldita! 10 pontos etéreos!"; break;
-          case "✨": ghostMessage = "Faísca espectral! 20 pontos sombrios!"; break;
-          case "🎃": ghostMessage = "Abóbora assombrada! 40 pontos fantasmagóricos!"; break;
-          case "🪦": ghostMessage = "Túmulo fantasmático! 100 pontos de arrepiar!"; break;
-        }
-        message.textContent = ghostMessage;
-        setTimeout(() => {
-          popup.classList.remove("hidden");
-          popup.classList.add("show");
-        }, 500);
-      }
-
-    } else if (s1 === s2 || s2 === s3 || s1 === s3) {
-      points += 5;
-      message.textContent = "Dois espectros colidem… 5 pontos de pura treva!";
-      setTimeout(() => {
-        popup.classList.remove("hidden");
-        popup.classList.add("show");
-      }, 500);
-
-    } else {
-      message.textContent = "Nenhum espírito foi invocado, a escuridão segue ao seu lado";
-      setTimeout(() => {
-        popup.classList.remove("hidden");
-        popup.classList.add("show");
-      }, 500);
+  } else {
+    let ghostMessage = "";
+    switch(s1) {
+      case "🕯️": ghostMessage = "Vela maldita! 10 pontos etéreos!"; break;
+      case "✨": ghostMessage = "Faísca espectral! 20 pontos sombrios!"; break;
+      case "🎃": ghostMessage = "Abóbora assombrada! 40 pontos fantasmagóricos!"; break;
+      case "🪦": ghostMessage = "Túmulo fantasmático! 100 pontos de arrepiar!"; break;
     }
+    message.textContent = ghostMessage;
+    setTimeout(() => {
+      popup.classList.remove("hidden");
+      popup.classList.add("show");
+    }, 500);
+  }
+
+} else if (s1 === s2 || s2 === s3 || s1 === s3) {
+  // Dois iguais → apenas adiciona pontos, sem popup
+  points += 5;
+  console.log("Dois espectros colidem… 5 pontos de pura treva!");
+} else {
+  // Nenhum igual → nada de popup
+  console.log("Nenhum espírito foi invocado");
+}
+
+// Atualiza sempre os pontos no display
+document.getElementById("points").textContent = points;
+
+// Verifica fim do jogo
+if (attempts >= maxAttempts && !gameOver) {
+  gameOver = true;
+  checkFinalResult();
+}
+
 
     document.getElementById("points").textContent = points;
+    if (attempts >= maxAttempts) {
+  checkFinalResult();
+}
+if (attempts >= maxAttempts && !gameOver) {
+  gameOver = true; // marca que o jogo terminou
+  checkFinalResult(); // só chama uma vez
+}
   }
 
   // Fechar popup normal
@@ -269,7 +326,36 @@ exchangeActions.forEach(action => {
   });
 });
 
+function checkFinalResult() {
+  if (points >= 100) {
+    // abrir popup de troca
+    document.getElementById("exchange-popup").style.display = "block";
+    exchangePoints();
+  } else {
+    // abrir popup de derrota
+    const losePopup = document.getElementById("lose-popup");
+    losePopup.classList.remove("hidden");
+    losePopup.classList.add("show");
+  }
+}
+// botão de fechar derrota
+document.getElementById("close-lose").addEventListener("click", () => {
+  const losePopup = document.getElementById("lose-popup");
+  losePopup.classList.remove("show");
+  losePopup.classList.add("hidden");
 
+  // Reinicia o jogo
+  attempts = 0;
+  points = 0;
+  gameOver = false;
+  updateUI();
+  document.getElementById("points").textContent = points;
+});
+// Fecha popup de regras
+document.getElementById("close-rules").addEventListener("click", () => {
+  const rulesPopup = document.getElementById("rules-popup");
+  rulesPopup.style.display = "none";
+});
 
   </script>
 </body>
